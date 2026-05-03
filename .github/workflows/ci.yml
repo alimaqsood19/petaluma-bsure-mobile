@@ -1,0 +1,93 @@
+# .github/workflows/ci.yml
+#
+# Lint + typecheck + Vitest unit tests + Maestro E2E (mocked BLE) on every PR.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with: { version: 9 }
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm tsc --noEmit
+
+      - name: Unit tests (Vitest)
+        run: pnpm test:unit -- --coverage
+
+      - name: Build Storybook (smoke test)
+        run: pnpm build-storybook --quiet
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.run_id }}
+          path: coverage/
+          retention-days: 14
+
+  maestro:
+    runs-on: macos-14   # Maestro flows for iOS run on macOS
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 30
+    needs: lint-and-test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'pnpm' }
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Maestro
+        run: |
+          curl -Ls https://get.maestro.mobile.dev | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Boot iOS Simulator
+        run: |
+          xcrun simctl boot "iPhone 15" || true
+
+      - name: Build dev client (cached)
+        run: pnpm exec expo prebuild --no-install --platform ios
+
+      - name: Run Maestro flows
+        env:
+          MAESTRO_DRIVER: ios
+        run: maestro test test/e2e/
+
+      - name: Upload Maestro screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-failure-${{ github.run_id }}
+          path: ~/.maestro/tests/
+          retention-days: 7

@@ -1,0 +1,53 @@
+# .github/workflows/eas-submit.yml
+#
+# Submits the latest production build to App Store Connect + Google Play.
+# Triggered manually after a v* tag's EAS Build completes.
+#
+# Required secrets:
+#   EXPO_TOKEN
+# (Apple App-specific password + Google service account already in EAS via
+#  `eas credentials`.)
+
+name: EAS Submit
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform'
+        required: true
+        type: choice
+        options: [all, ios, android]
+        default: all
+      build_id:
+        description: 'EAS build ID (optional — defaults to latest production build)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: EAS Submit
+        run: |
+          if [ -n "${{ inputs.build_id }}" ]; then
+            eas submit --platform ${{ inputs.platform }} --id ${{ inputs.build_id }} --non-interactive
+          else
+            eas submit --platform ${{ inputs.platform }} --latest --non-interactive
+          fi
