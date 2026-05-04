@@ -12,30 +12,37 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppProviders>
         <StatusBar style="light" />
-        <AuthGate>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: '#0A1816' },
-            }}
-          >
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="complete-profile"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen name="boots" options={{ headerShown: false }} />
-            <Stack.Screen name="horses" options={{ headerShown: false }} />
-            <Stack.Screen name="scans" options={{ headerShown: false }} />
-          </Stack>
-        </AuthGate>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: '#0A1816' },
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="complete-profile"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="boots" options={{ headerShown: false }} />
+          <Stack.Screen name="horses" options={{ headerShown: false }} />
+          <Stack.Screen name="scans" options={{ headerShown: false }} />
+        </Stack>
+        <AuthGate />
       </AppProviders>
     </GestureHandlerRootView>
   );
 }
 
-function AuthGate({ children }: { children: React.ReactNode }) {
+/**
+ * AuthGate is rendered alongside the Stack (not wrapping it) so that the
+ * navigator is mounted before any redirect runs — Expo Router throws
+ * "Attempted to navigate before mounting the Root Layout" if you call
+ * router.replace from a render-time wrapper. The gate itself renders only
+ * a fullscreen spinner overlay during `booting`; once auth state resolves
+ * it decides where to push the user via router.replace.
+ */
+function AuthGate() {
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const bootstrap = useAuthStore((s) => s.bootstrap);
@@ -69,7 +76,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace('/');
         return;
       }
-      // Defensive: if we somehow ended up nowhere, push to tabs.
       if (
         profileComplete &&
         !inTabs &&
@@ -83,19 +89,26 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [router, segments, status, user]);
 
-  if (status === 'booting') {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#0A1816',
-        }}
-      >
-        <ActivityIndicator color="#00DDA8" />
-      </View>
-    );
-  }
-  return <>{children}</>;
+  if (status !== 'booting') return null;
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        ...(StyleSheetAbsoluteFill as Record<string, unknown>),
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#0A1816',
+      }}
+    >
+      <ActivityIndicator color="#00DDA8" />
+    </View>
+  );
 }
+
+const StyleSheetAbsoluteFill = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+};

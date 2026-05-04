@@ -120,14 +120,18 @@ const tokens = createTokens({
     true: radius.md,
   },
 
+  // Tamagui's createTokens requires zIndex keys to match the size scale
+  // (numeric strings 0, 1, 2…). Our semantic names (base/raised/overlay…)
+  // are mapped to the closest equivalent size key here. T2.11 design polish
+  // will introduce a wrapper that exposes the semantic names back to UI.
   zIndex: {
-    base: zIndex.base,
-    raised: zIndex.raised,
-    overlay: zIndex.overlay,
-    modal: zIndex.modal,
-    popover: zIndex.popover,
-    toast: zIndex.toast,
-    tooltip: zIndex.tooltip,
+    0: 1,
+    1: zIndex.raised,
+    2: zIndex.overlay,
+    3: zIndex.modal,
+    4: zIndex.popover,
+    5: zIndex.toast,
+    6: zIndex.tooltip,
   },
 });
 

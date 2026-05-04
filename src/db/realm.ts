@@ -12,8 +12,6 @@
  * initial Phase 1 shape; no migrations defined yet.
  */
 
-import { v7 as uuidv7 } from 'uuid';
-
 import { REALM_SCHEMA_VERSION, REALM_SCHEMAS } from './schemas';
 
 let _instance: unknown = null;
@@ -58,12 +56,33 @@ export async function closeRealm(): Promise<void> {
 }
 
 /**
- * UUIDv7 generator used by every repository when minting a new local id.
- * v7 is monotonic (timestamp-prefixed) which gives nice ordering when
- * the API also uses v7 ids — see ADR 0009 / spec.md scan write contract.
+ * UUIDv7-shaped client ID. Time-prefixed (sortable) + Math.random() suffix.
+ * We don't need cryptographic randomness on the device — these are local
+ * identifiers used as the API's `clientId` for idempotency on write. The
+ * crypto-quality v4/v7 generator from `uuid` requires a native module
+ * (`react-native-get-random-values`) which adds linker friction; this
+ * version produces a v7-formatted hex string with the same ordering
+ * properties without any native dependency.
+ *
+ * Format: 8-4-4-4-12 hex (UUID), version nibble = 7, variant nibble = 8/9/a/b.
  */
 export function newId(): string {
-  return uuidv7();
+  const ts = Date.now();
+  // 48-bit big-endian timestamp → first 12 hex chars
+  const tsHex = ts.toString(16).padStart(12, '0').slice(-12);
+  const part1 = tsHex.slice(0, 8); // time_high
+  const part2 = tsHex.slice(8, 12); // time_low
+  const rand = (n: number): string =>
+    Math.floor(Math.random() * 16 ** n)
+      .toString(16)
+      .padStart(n, '0');
+  // version 7
+  const part3 = `7${rand(3)}`;
+  // variant 10xx → leading nibble 8/9/a/b
+  const variantNibble = (8 + Math.floor(Math.random() * 4)).toString(16);
+  const part4 = `${variantNibble}${rand(3)}`;
+  const part5 = rand(12);
+  return `${part1}-${part2}-${part3}-${part4}-${part5}`;
 }
 
 /** Minimal subset of the realm.Realm surface our repositories use. */
