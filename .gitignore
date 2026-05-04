@@ -7,6 +7,9 @@ web-build/
 # Watchman
 .watchmanconfig
 
+# Tamagui babel cache
+.tamagui/
+
 # Node
 node_modules/
 *.log

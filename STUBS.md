@@ -10,30 +10,37 @@ shipping a deployed build.
 > submission), **block-paid** (before paid features ship), **soft**
 > (improves a path already covered by another guard).
 
-## Bootstrap (T0.05)
+## Bootstrap (T0.05 / T1.15)
 
-- **soft** `app/index.tsx` — the placeholder home screen renders plain
-  React Native components, not Tamagui. The `tamagui.config.ts` and
-  `src/ui/*` component library exist but aren't wired into the entry yet.
-  → resume in **T1.15** (project bootstrap layers in Tamagui provider +
-  Expo Router nav scaffold + bottom tabs).
+- **soft** `tsconfig.json` excludes the legacy design-system files
+  (`src/ui/Button.tsx`, `Text.tsx`, `Toggle.tsx`, `Modal.tsx`, `Pill.tsx`,
+  `Card.tsx`, `Header.tsx`, `BottomNav.tsx`, `Tab.tsx`, `Input.tsx`,
+  `ThemeProvider.tsx`, `tokens-loader.ts`, `index.ts`, plus their
+  `.stories.tsx`) and `.storybook/**` from `pnpm typecheck`. Those files
+  were scaffolded against an older Tamagui type shape and have type
+  errors against current Tamagui (Text/Toggle font-size tokens,
+  variant casts). They aren't imported by the running app yet — the
+  bottom-nav scaffold uses Tamagui primitives directly. T1.36/T1.37
+  (design-system polish) will refit them and re-include in typecheck.
+  → resume in **T1.36/T1.37**.
 
-- **soft** `tsconfig.json` excludes `tamagui.config.ts`, `src/ui/**`, and
-  `.storybook/**` from `pnpm typecheck`. Those files were scaffolded
-  against an older Tamagui type shape and have ~80 pre-existing type
-  errors (Text/Toggle font-size token names, optional-index access in
-  `tokens-loader.ts`). T1.15 owns wiring Tamagui into the entry and is
-  the right scope to either re-pin Tamagui or update the design-system
-  types so they re-include cleanly. → resume in **T1.15**.
-
-- **soft** `babel.config.js` — `@tamagui/babel-plugin` is installed but
-  not enabled. The compile-time optimizer ADR 0022 calls for is therefore
-  not running yet. Bundle size is fine for Phase 0 placeholder; the plugin
-  flips on with the Tamagui provider wiring. → resume in **T1.15**.
+- **soft** Inter font is referenced by `tamagui.config.ts` via
+  `@tamagui/font-inter`'s `face` mapping (`Inter-Regular`, etc.) but
+  the actual font files aren't loaded via `expo-font` yet. RN falls
+  back to system font, which is fine visually but produces a yellow
+  warning at runtime. Final font loading lands with the T2.11 brand
+  polish pass. → resume in **T2.11**.
 
 - **soft** `assets/` icons + splash images are placeholders inherited
   from the design-system scaffold. Final brand assets land with the
   T2.11 design polish pass. → resume in **T2.11**.
+
+## Nav (T1.15)
+
+- **soft** Bottom-nav tab icons are placeholder geometric shapes from
+  `src/ui/nav/TabIcon.tsx`. Final iconography lands with T2.11 design
+  polish (or sooner via Claude Design hand-off — see
+  `docs/design-system/claude-design-handoff.md`). → resume in **T2.11**.
 
 ## Auth (placeholder until T1.16)
 
