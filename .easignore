@@ -1,0 +1,9 @@
+.storybook/
+**/*.stories.tsx
+docs/
+test/
+coverage/
+.maestro/
+*.md
+!app.json
+!eas.json

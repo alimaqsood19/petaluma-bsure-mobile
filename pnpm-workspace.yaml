@@ -1,0 +1,8 @@
+# Marks this directory as the pnpm workspace root, which prevents pnpm from
+# walking up the filesystem to ~/pnpm-workspace.yaml (which silently makes
+# `pnpm install` a no-op in this repo). We don't have sub-packages — the
+# `packages` list is intentionally empty.
+packages: []
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true

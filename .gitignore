@@ -4,6 +4,9 @@
 dist/
 web-build/
 
+# Watchman
+.watchmanconfig
+
 # Node
 node_modules/
 *.log
@@ -42,3 +45,9 @@ eas.json.local
 # Test
 coverage/
 .maestro/
+
+# Generated types
+.expo/types/
+
+# pnpm
+.pnpm-store/
