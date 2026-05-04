@@ -28,19 +28,23 @@ Tasks scoped to this repo (per `../bsure-infra/specs/tasks.md`): **T1.15–T1.26
 
 ## Locked-in stack
 
-- **Framework:** React Native + Expo SDK 50+ (ADR 0005)
+- **Framework:** React Native 0.79 + Expo SDK 53 (ADR 0005)
 - **Language:** TypeScript strict
-- **Routing:** Expo Router (file-based)
-- **Styling / UI primitives:** **Tamagui** (ADR 0022 — supersedes NativeWind from ADR 0005)
+- **Routing:** Expo Router 5 (file-based) — root `_layout.tsx` renders `<Stack>` alongside (not wrapping) `<AuthGate>` so the navigator is mounted before any redirect runs
+- **Styling / UI primitives:** **Tamagui 1.144** (ADR 0022 — supersedes NativeWind from ADR 0005)
 - **Design system:** `tokens.json` at repo root + `src/ui/` component library + Storybook on RN-Web (ADR 0017, ADR 0022)
-- **Local DB:** Realm + custom REST sync (ADR 0005)
-- **State:** Zustand (per-domain stores)
+- **Local DB:** Realm 20 + custom REST sync (ADR 0005)
+- **State:** Zustand (per-domain stores: `auth`, `ble`, `prefs`, `horses`, `sync`, `scans/captureStore`, `ble/pairing`, `ble/adjacency`)
 - **BLE:** `react-native-ble-plx` v3 — TempPulse service `1e265423-...` (ADR 0009)
 - **3D:** `@react-three/fiber` + Three.js
 - **Push:** Expo Push (APNs/FCM relay)
 - **Errors:** Sentry (`SENTRY_DSN` via app config extra)
-- **Tests:** Vitest (logic) + Maestro (E2E flows)
-- **Builds:** EAS Build + EAS Submit
+- **Tests:** Jest + babel-jest (unit) + Maestro (E2E)
+- **Builds:** `pnpm ios` for local dev (Xcode + CocoaPods) · EAS Build + EAS Submit for distribution
+
+### Identifier generation
+
+We do **not** use the `uuid` package's crypto-backed v7 — Hermes lacks `crypto.getRandomValues()` and adding `react-native-get-random-values` requires its native module to be linked in (autolinking issues under pnpm). `src/db/realm.ts:newId()` is a self-contained UUIDv7-shaped generator (timestamp prefix + `Math.random()` suffix). Sufficient for client-side identifiers used as the API's `clientId` for idempotency.
 
 ## Inviolable principles (subset)
 
@@ -56,7 +60,37 @@ Full constitution: `../bsure-infra/specs/constitution.md`.
 
 The mobile app talks to the backend at `EXPO_PUBLIC_API_URL` (defaults to `http://localhost:3000`). When the backend runs in `LOCAL_DEV=true` mode, the mobile app sends `Authorization: Bearer dev-<userid>` and any value works (see ADR 0021).
 
-For BLE testing you need a real device — Expo Go cannot include the native module. Use `eas build --profile development` to produce a dev client, then run `pnpm start --dev-client`.
+End-to-end recipe (full version in `README.md`):
+
+```bash
+# Terminal A — backend
+cd ../bsure-api && cp .env.example .env && docker compose up -d \
+  && pnpm install && pnpm db:migrate:deploy && pnpm dev
+
+# Terminal B — mobile (iOS Simulator with BLE + Realm linked)
+cd ../bsure-mobile && cp .env.example .env && pnpm install && pnpm ios
+```
+
+`pnpm ios` runs `expo run:ios --device "iPhone 17 Pro"`. First build is 5–10 minutes (Xcode compiles ~80 RN pods); subsequent runs reuse DerivedData. Expo Go is **not** sufficient because the bundle imports `realm` and `react-native-ble-plx` natively.
+
+### Path-with-spaces caveat
+
+The workspace folder name `Petaluma - B Sure/` contains spaces, which trips two React Native build-script phases (unquoted `bash -c "$VAR"` calls). Two patches in this repo work around it:
+
+1. `node_modules/.pnpm/react-native@…/scripts/xcode/with-environment.sh` — changed `$1` → `"$@"`.
+2. `ios/Pods/Pods.xcodeproj` — `[CP-User] Generate Specs` build phase rewritten to quote `"$WITH_ENVIRONMENT" "$SCRIPT_PHASES_SCRIPT"` after pod install.
+
+The cleanest alternative is to build from a no-space path:
+
+```bash
+mkdir -p /tmp/bsure-build
+rsync -a --exclude=ios --exclude=android --exclude=.expo \
+       --exclude=dist --exclude=node_modules \
+       . /tmp/bsure-build/
+cd /tmp/bsure-build && pnpm install && pnpm ios
+```
+
+For BLE testing on a real device, use `eas build --profile development-device --platform ios`, install the artifact, then run `pnpm start` — the dev client connects to your laptop's Metro server.
 
 ## Anti-vocabulary (don't say these in copy or comments)
 
@@ -102,3 +136,4 @@ Phase 2 will add domain components: Gauge, HeatMapCell, HeatMapGrid, LegPicker, 
 | Version | Date | Notes |
 |---|---|---|
 | 1.0 | 2026-04-30 | Initial scoped CLAUDE.md for the bsure-mobile repo. Tied to spec-set v0.3. |
+| 1.1 | 2026-05-04 | Phase 1 mobile shipped (T0.05, T1.15–T1.26). Added local-dev recipe, path-with-spaces patches, custom UUIDv7 generator note, Expo Router 5 / Tamagui 1.144 / RN 0.79 / Realm 20 versions. |

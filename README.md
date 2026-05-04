@@ -11,72 +11,110 @@ Petaluma - B Sure/
 
 ## What lives here
 
-- `app/` — Expo Router file-based routes
-- `src/` — domain modules (auth, ble, db, sync, api, state, ui, features)
+- `app/` — Expo Router file-based routes (sign-in, complete-profile, (tabs), boots, horses, scans)
+- `src/` — domain modules: `auth/`, `ble/`, `db/` (Realm), `sync/`, `api/`, `prefs/`, `horses/`, `scans/`, `ui/`, `providers/`, `util/`
 - `tokens.json` + `tamagui.config.ts` + `src/ui/` — design system (ADR 0017, ADR 0022)
-- `assets/` — icons, splash, fonts
+- `assets/` — icons, splash, fonts (final brand assets land in T2.11)
 - `.storybook/` — Storybook on RN-Web for the design system
 - `docs/design-system/` — design-system docs (tokens, components, a11y)
-- `test/` — unit + Maestro E2E flows
+- `test/unit/` — jest unit tests (api client, auth store, BLE store, sync logic, etc.)
 - `.env.example` — required environment variables
 - `eas.json` — EAS build profiles (development / preview / production)
 - `app.json` — Expo config
 - `STUBS.md` — what's stubbed and where the real wiring lands
 
-## Quick start (local dev, no AWS) — ≤ 10 minutes
+## Quick start (local dev, no AWS)
 
-**Prerequisites**
+This walks you from a fresh clone all the way to the B·SURE Welcome screen on iPhone 17 Pro Simulator, signed in via the LOCAL_DEV stub against the API running on your machine.
 
-- Node 20+ (`node -v`)
-- pnpm 9+ (`pnpm -v`; `corepack enable` or `brew install pnpm`)
-- Xcode (iOS Simulator) or Android Studio (Android Emulator)
-- For real-device BLE testing: [EAS CLI](https://docs.expo.dev/eas/) (`npm i -g eas-cli`)
+### Prerequisites
 
-**Steps**
+- **Node 20+** (`node -v`)
+- **pnpm 11+** (`pnpm -v`; `corepack enable` or `brew install pnpm`)
+- **Xcode 16+** with the iOS Simulator installed (`xcodebuild -version`)
+- **CocoaPods** for native iOS pods (`pod --version`; install via `brew install cocoapods` or `sudo gem install cocoapods`)
+- **Docker Desktop** running — needed by `bsure-api` (Postgres + Redis)
+- **EAS CLI** (optional, only for real-device BLE) — `npm i -g eas-cli`
+
+### 1. Start the backend (`bsure-api`)
 
 ```bash
-# 1. Copy env template
-cp .env.example .env
-# Default EXPO_PUBLIC_API_URL=http://localhost:3000 works for the iOS Simulator.
-# For a real device on the same wifi, set it to http://<your-machine-ip>:3000.
+cd ../bsure-api
+cp .env.example .env             # LOCAL_DEV=true is the default — leave it
+docker compose up -d             # Postgres 16 + TimescaleDB + Redis 7
+pnpm install                     # one-time
+pnpm db:migrate:deploy           # applies Prisma + Timescale migrations
+pnpm dev                         # nest start --watch + dotenv autoload
+```
 
-# 2. Install deps
+API listens on `http://localhost:3000`. Sanity-check:
+
+```bash
+curl -i http://localhost:3000/healthz
+# → 200 OK { "status": "ok" }
+
+curl -H "Authorization: Bearer dev-alice" http://localhost:3000/v1/me
+# → 200 with { "user": { "cognitoSub": "local:alice", ... }, "memberships": [] }
+```
+
+`bsure-api/README.md` has the full recipe + troubleshooting.
+
+### 2. Build + launch the mobile app on iOS Simulator
+
+In a second terminal:
+
+```bash
+cd ../bsure-mobile
+cp .env.example .env             # EXPO_PUBLIC_API_URL=http://localhost:3000 by default
 pnpm install
-
-# 3. Make sure bsure-api is running locally:
-#    cd ../bsure-api && docker compose up -d && pnpm dev
-
-# 4. Start Expo (uses the dev client by default — falls back to Expo Go for the
-#    placeholder screens that don't need native modules).
-pnpm start
-
-# Then press `i` for iOS Simulator, `a` for Android Emulator, or scan the QR
-# with the Expo Go app. (Expo Go works for the placeholder screens but cannot
-# include the BLE native module — see "BLE testing" below.)
+pnpm ios                         # = expo run:ios --device "iPhone 17 Pro"
 ```
 
-The placeholder Home screen displays the configured API URL and the build
-version, which is enough to confirm the bootstrap is wired correctly. Real
-screens land in T1.15+.
+The first run takes 5–10 minutes (Xcode compiles ~80 React Native pods + Tamagui native bits + realm + react-native-ble-plx). Subsequent runs reuse Xcode's DerivedData and finish in 30–60 seconds.
 
-### BLE testing
+When the build finishes you'll see:
 
-`react-native-ble-plx` is a native module — Expo Go cannot include it. To
-exercise BLE flows you need a development build:
+```
+› Build Succeeded
+› Installing /…/BSure.app
+› Installing on iPhone 17 Pro
+› Opening on iPhone 17 Pro (com.petaluma.bsure)
+```
+
+Metro starts on `:8081`, the Simulator opens, and the **Welcome screen** appears with the B·SURE wordmark, a LOCAL_DEV banner, and three Continue buttons.
+
+### 3. Walk the demo
+
+1. **Continue with Email** → enter any dev username (e.g. `alice`) → tap Continue.
+   - Mobile sends `Authorization: Bearer dev-alice` to `/v1/me`.
+   - API auto-creates a `User` row with `cognitoSub=local:alice`.
+2. App routes to **Complete Profile** since the new user has no `firstName`.
+   - Fill in name + role (rider / trainer / etc.) + stable name + discipline.
+   - Save — server-side persistence requires `PATCH /v1/me` + `POST /v1/organizations` which aren't on the API yet (see `STUBS.md`); the mobile form falls through to a "Saved locally" alert and proceeds to Home.
+3. **Home tab** lists horses scoped to your barn (Realm-backed) with a sync indicator + Add a horse CTA.
+4. **Quick Read** tab kicks off a no-horse scan (the BLE permission gate prompts first).
+5. **Account** tab — pick OS / Light / Dark theme + temperature/height/weight units (persists across cold starts via `expo-secure-store`); sign out clears the stored token + routes back to Welcome; Delete account hits `DELETE /v1/me`.
+
+### Path-with-spaces caveat (this workspace)
+
+The folder name **`Petaluma - B Sure/`** has spaces. Several React Native + CocoaPods script phases unquote shell variables and break under those paths (the `Generate Specs` script calls `/bin/sh -c "$WITH_ENVIRONMENT $SCRIPT_PHASES_SCRIPT"` — both expand into paths with spaces, which the shell then word-splits).
+
+Two things in this repo work around it:
+
+1. **`with-environment.sh` patch** — a one-line fix in `node_modules/.pnpm/react-native@…/scripts/xcode/with-environment.sh` (changes `$1` → `"$@"`). This survives `pnpm install` because it lives inside `node_modules/.pnpm` content-addressed storage.
+2. **`expo run:ios` patches `Pods.xcodeproj` after pod install** — the `Generate Specs` build phase is rewritten to call `"$WITH_ENVIRONMENT" "$SCRIPT_PHASES_SCRIPT"` (proper quoting). This is regenerated on each pod install; if you ever blow away `ios/` the next `pnpm ios` will re-apply.
+
+If you'd rather avoid both, **rsync the project to a no-space path before building**:
 
 ```bash
-# Build for the iOS Simulator (no provisioning, fast):
-eas build --profile development --platform ios
-
-# Build for a real iOS device (requires Apple developer account + provisioning):
-eas build --profile development-device --platform ios
-
-# Build for an Android device:
-eas build --profile development --platform android
+mkdir -p /tmp/bsure-build
+rsync -a --exclude='ios' --exclude='android' --exclude='.expo' \
+       --exclude='dist' --exclude='node_modules' \
+       "../bsure-mobile/" /tmp/bsure-build/
+cd /tmp/bsure-build && pnpm install && pnpm ios
 ```
 
-Then install the artifact on the device and run `pnpm start` — the dev client
-will connect to your laptop's Metro server. See `docs/runbooks/ble-dev.md` (TBD).
+This is what we used to get a clean first build.
 
 ### Troubleshooting
 
@@ -86,22 +124,37 @@ will connect to your laptop's Metro server. See `docs/runbooks/ble-dev.md` (TBD)
   `pnpm-workspace.yaml` at the repo root marks this directory as the workspace
   root for pnpm and avoids the issue. If you still see it, run
   `pnpm install --ignore-workspace` once.
+- **Xcode build fails with `error: /Users/.../Petaluma: No such file or directory`** during `[CP-User] Generate Specs` or any `bash -c "$VAR"` PhaseScriptExecution.
+  This is the path-with-spaces issue described above. Either re-apply the
+  `with-environment.sh` + `Pods.xcodeproj` patches, or build from `/tmp/bsure-build`.
 - **`pnpm install` fails on `expo` peer-dep mismatches.** Check `node -v` is 20+
-  and `pnpm -v` is 9+. Run `pnpm install --strict-peer-dependencies=false` once
+  and `pnpm -v` is 11+. Run `pnpm install --strict-peer-dependencies=false` once
   to confirm whether the mismatch is in your tree or in our lockfile.
 - **iOS Simulator never launches.** Make sure Xcode is installed and the
   command-line tools point at it: `sudo xcode-select -s /Applications/Xcode.app`.
 - **Metro bundler crashes on `react-native-reanimated` import.** Verify
   `babel.config.js` includes `'react-native-reanimated/plugin'` (it does in
   the committed copy). Then `pnpm start --clear`.
-- **App boots but `/v1/me` returns 401.** The mobile app is sending
+- **App boots, Welcome screen renders, but `/v1/me` returns 401.** The mobile app sends
   `Authorization: Bearer <EXPO_PUBLIC_DEV_BEARER>`; make sure the API was
   started with `LOCAL_DEV=true` (the default in `.env.example`).
+- **`createTamagui() invalid tokens.zIndex`** — `tamagui.config.ts` maps semantic zIndex names to the size scale (numeric keys) because Tamagui's createTokens validates against the size scale; T2.11 will revisit.
+- **`Cannot read properties of undefined (reading 'registerWorker')`** when running `bsure-api`'s `pnpm dev` — your local copy is on the legacy `tsx watch` script. Pull the latest `bsure-api`; the script is now `nest start --watch` + `dotenv` autoload.
+
+### BLE testing on a real device
+
+`react-native-ble-plx` only registers its native module on a real device. To exercise pairing + scan capture against an actual Smart Boot:
+
+```bash
+eas build --profile development-device --platform ios   # or --platform android
+```
+
+Install the artifact, then run `pnpm start` here — the dev client connects to your laptop's Metro server. See `docs/runbooks/ble-dev.md` (TBD).
 
 ## Tests
 
 ```bash
-pnpm test         # unit tests (jest-expo) — placeholder until T1.15+
+pnpm test         # jest unit tests (~41 across api client, auth, BLE, sync, schemas, etc.)
 pnpm typecheck    # tsc --noEmit (strict)
 pnpm lint         # eslint (expo config)
 ```
