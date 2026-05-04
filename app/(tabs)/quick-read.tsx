@@ -1,7 +1,25 @@
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { ScrollView } from 'react-native';
 import { Stack, Text, YStack } from 'tamagui';
 
+import { BluetoothRequired } from '@/ble/BluetoothRequired';
+import { useBleStore } from '@/ble/store';
+
 export default function QuickReadScreen() {
+  const status = useBleStore((s) => s.status);
+  const refresh = useBleStore((s) => s.refresh);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
+
+  if (status !== 'granted') {
+    return <BluetoothRequired status={status} />;
+  }
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#0A1816' }}>
       <YStack padding="$5" gap="$5">
@@ -29,8 +47,8 @@ export default function QuickReadScreen() {
             Coming in T1.24
           </Text>
           <Text color="$colorSecondary" fontSize={13}>
-            Wires the BLE state machine (T1.20) + scan capture flow (T1.23) into the
-            unassigned-scan path.
+            Wires the BLE state machine (T1.20) + scan capture flow (T1.23)
+            into the unassigned-scan path.
           </Text>
         </Stack>
       </YStack>

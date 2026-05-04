@@ -77,9 +77,22 @@ shipping a deployed build.
   signup (F1.5 — email verification) doesn't render until the
   Cognito pool exists. → resume alongside **T1.01.6**.
 
-## BLE (placeholder until T1.20)
+## BLE (T1.18 / T1.20)
 
-- *(none yet — entries land as T1.20 builds the BLE state machine.)*
+- **soft** `src/ble/permissions.ts` instantiates `BleManager` lazily with
+  `new mod.BleManager()` and never disposes it. Acceptable while the
+  scan flow doesn't run yet, but T1.20 must replace this with a single
+  shared manager instance whose lifecycle the BLE state machine owns
+  (so the app doesn't hold a CBCentralManager handle just to read the
+  permission state). → resume in **T1.20**.
+
+- **soft** Android API-level branching uses the `Platform.Version`
+  number directly. Phase-2 Android polish should pull a typed helper
+  (e.g. `isAndroid12OrNewer()`) so this isn't repeated each time we
+  add a new BLE permission. → resume **T2.11** or first Android-side
+  alpha task.
+
+- *(BLE state machine + Boot pairing entries land in T1.20.)*
 
 ## Sync (placeholder until T1.25)
 
