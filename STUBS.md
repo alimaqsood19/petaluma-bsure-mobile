@@ -79,12 +79,23 @@ shipping a deployed build.
 
 ## BLE (T1.18 / T1.20)
 
-- **soft** `src/ble/permissions.ts` instantiates `BleManager` lazily with
-  `new mod.BleManager()` and never disposes it. Acceptable while the
-  scan flow doesn't run yet, but T1.20 must replace this with a single
-  shared manager instance whose lifecycle the BLE state machine owns
-  (so the app doesn't hold a CBCentralManager handle just to read the
-  permission state). → resume in **T1.20**.
+- **resolved in T1.20** ~~`src/ble/permissions.ts` instantiates `BleManager`
+  lazily and never disposes it.~~ The shared singleton now lives in
+  `src/ble/manager.ts` (`getManager()` / `destroyManager()`); permission
+  module reuses it.
+
+- **soft** `src/ble/pairing.ts` keeps the connected `BleDevice` reference
+  in a closure inside `usePairingStore` rather than in the store
+  itself (it's not serializable). On hot-reload during development the
+  reference is lost — fine, as the user just retries. Production is
+  unaffected. → no resume needed.
+
+- **soft** `connectAndReadMeta()` reads serial via the standard GATT
+  Device Info characteristic 2A25; ADR 0009 lists this as supported,
+  but firmware sometimes returns padded/truncated strings. The
+  `decodeAscii` helper trims whitespace defensively. If we see drift
+  in real-barn pairings, capture a runtime hex dump and revisit.
+  → revisit at **T1.34** (real-barn alpha).
 
 - **soft** Android API-level branching uses the `Platform.Version`
   number directly. Phase-2 Android polish should pull a typed helper

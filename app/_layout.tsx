@@ -25,6 +25,7 @@ export default function RootLayout() {
               name="complete-profile"
               options={{ headerShown: false }}
             />
+            <Stack.Screen name="boots" options={{ headerShown: false }} />
           </Stack>
         </AuthGate>
       </AppProviders>
@@ -71,6 +72,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         profileComplete &&
         !inTabs &&
         segments.length > 0 &&
+        !inAuthRoute &&
+        !inCompleteProfile &&
         !['horses', 'boots', 'scans', 'onboarding'].includes(segments[0] ?? '')
       ) {
         router.replace('/');
