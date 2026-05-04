@@ -181,6 +181,23 @@ export default function HorseProfileScreen() {
           <Field label="Contact" value={horse.contactInfo} />
         </Stack>
 
+        <Link href={`/scans/new?horseId=${horse.id}`} asChild>
+          <Pressable accessibilityRole="button" hitSlop={8}>
+            <Stack
+              backgroundColor="$primary"
+              borderRadius="$pill"
+              paddingVertical="$3"
+              paddingHorizontal="$5"
+              alignItems="center"
+              minHeight={48}
+            >
+              <Text color="#0A1816" fontSize={15} fontWeight="700">
+                Start a scan
+              </Text>
+            </Stack>
+          </Pressable>
+        </Link>
+
         <Link href={`/horses/${horse.id}/edit`} asChild>
           <Pressable accessibilityRole="button" hitSlop={8}>
             <Stack

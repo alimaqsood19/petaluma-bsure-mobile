@@ -27,6 +27,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="boots" options={{ headerShown: false }} />
             <Stack.Screen name="horses" options={{ headerShown: false }} />
+            <Stack.Screen name="scans" options={{ headerShown: false }} />
           </Stack>
         </AuthGate>
       </AppProviders>
