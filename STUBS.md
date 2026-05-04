@@ -118,9 +118,33 @@ shipping a deployed build.
   schema property changes shape, bump the version and add a copy step
   inside `onMigration` in `src/db/realm.ts`. → resume per change.
 
-## Sync (placeholder until T1.25)
+## Sync (T1.25)
 
-- *(none yet — entries land as T1.25 builds the outbound queue + delta pull.)*
+- **soft** No `@react-native-community/netinfo` integration — the engine
+  detects offline via `apiResult.code === 'network'` after a request
+  fails. That works (a request must fail before we know we're offline)
+  but is wasteful when the radio is clearly off. → Phase 2 polish
+  (T2.27 has CloudWatch metrics; client-side counterpart is a follow-up).
+
+- **soft** Horse + Boot edits go through `/v1/sync/push` with op='upsert',
+  which the backend's sync controller accepts. Scan edits (e.g. flipping
+  unassigned=false from Quick Read) currently re-POST `/v1/scans` and
+  rely on the backend's clientId-based primary-key idempotency to
+  collapse onto the same row. Verified server-side via the spec's
+  scan write contract; revisit if the backend tightens scan immutability.
+  → revisit at **T2.06** or first scan-edit task.
+
+- **soft** No batched delete operations yet — `pendingDelete=true` rows
+  are pulled on inbound but never emit an outbound delete op. Phase 1
+  surfaces don't expose hard-delete UX (per E2 we're append-only with
+  archive instead). → revisit when we wire the explicit delete UX.
+
+- **soft** First-cold-start `_lastSyncedAt` lives in the engine module
+  (memory) — it resets on app force-quit. Persisting it (via
+  expo-secure-store or AsyncStorage) so the pull cursor survives across
+  launches is a Phase 2 polish; in the meantime the first pull after
+  force-quit re-fetches everything (idempotent on Realm).
+  → revisit at **T1.32** (Maestro flows surface this).
 
 ## Push (placeholder until T2.20)
 
