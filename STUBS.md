@@ -42,9 +42,26 @@ shipping a deployed build.
   polish (or sooner via Claude Design hand-off — see
   `docs/design-system/claude-design-handoff.md`). → resume in **T2.11**.
 
-## Auth (placeholder until T1.16)
+## Auth (T1.16)
 
-- *(none yet — entries land as T1.16 wires Cognito + LOCAL_DEV stub bearer.)*
+- **block-prod** `src/auth/cognito.ts` — `COGNITO_POOL_READY = false`.
+  All sign-in entry points (`signInWithProvider('apple' | 'google' |
+  'email')`) currently delegate to the LOCAL_DEV stub bearer per
+  ADR 0021. Real native Apple via `expo-apple-authentication`,
+  Google via `react-native-google-signin`, and Cognito Hosted UI for
+  email lands once **T1.01.6** (dev pool) is `[x]`. Until then the
+  Welcome screen renders a "LOCAL_DEV MODE" banner so testers know.
+  → resume **T1.01.6** + an auth-wiring follow-up.
+
+- **block-prod** Token refresh is unimplemented — a 401 from /v1/me
+  signs the user out instead of attempting the Cognito refresh-token
+  flow. Acceptable while LOCAL_DEV bearers don't expire; must be
+  wired before deployed envs. → resume alongside **T1.01.6**.
+
+- **soft** `app/sign-in.tsx` — the "Continue with Email" path takes a
+  raw dev userid rather than email + password. Real email/password
+  signup (F1.5 — email verification) doesn't render until the
+  Cognito pool exists. → resume alongside **T1.01.6**.
 
 ## BLE (placeholder until T1.20)
 
