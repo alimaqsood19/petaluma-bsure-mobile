@@ -41,11 +41,11 @@ This walks you from a fresh clone all the way to the B·SURE Welcome screen on i
 ```bash
 cd ../bsure-api
 cp .env.example .env             # LOCAL_DEV=true is the default — leave it
-docker compose up -d             # Postgres 16 + TimescaleDB + Redis 7
 pnpm install                     # one-time
-pnpm db:migrate:deploy           # applies Prisma + Timescale migrations
-pnpm dev                         # nest start --watch + dotenv autoload
+pnpm dev:up                      # = docker compose up -d --wait + migrate + nest start --watch
 ```
+
+`pnpm dev:up` brings the full stack (Postgres + TimescaleDB + Redis + migrations + API) up in one command. On subsequent days `pnpm dev` is enough.
 
 API listens on `http://localhost:3000`. Sanity-check:
 

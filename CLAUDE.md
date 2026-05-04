@@ -63,9 +63,8 @@ The mobile app talks to the backend at `EXPO_PUBLIC_API_URL` (defaults to `http:
 End-to-end recipe (full version in `README.md`):
 
 ```bash
-# Terminal A — backend
-cd ../bsure-api && cp .env.example .env && docker compose up -d \
-  && pnpm install && pnpm db:migrate:deploy && pnpm dev
+# Terminal A — backend (one command brings the full stack up)
+cd ../bsure-api && cp .env.example .env && pnpm install && pnpm dev:up
 
 # Terminal B — mobile (iOS Simulator with BLE + Realm linked)
 cd ../bsure-mobile && cp .env.example .env && pnpm install && pnpm ios
