@@ -38,7 +38,7 @@ describe('useAuthStore', () => {
   });
 
   it('signInLocalDev: persists the token + populates user on 200', async () => {
-    global.fetch = jest.fn().mockResolvedValue(
+    global.fetch = (jest.fn() as any).mockResolvedValue(
       jsonResponse(200, {
         user: {
           id: 'u1',
@@ -67,9 +67,9 @@ describe('useAuthStore', () => {
   });
 
   it('signInLocalDev: leaves status unauthenticated on 401', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(jsonResponse(401, { message: 'bad token' })) as unknown as typeof fetch;
+    global.fetch = (jest.fn() as any).mockResolvedValue(
+      jsonResponse(401, { message: 'bad token' }),
+    ) as unknown as typeof fetch;
 
     const result = await useAuthStore.getState().signInLocalDev('alice');
     expect(result.ok).toBe(false);

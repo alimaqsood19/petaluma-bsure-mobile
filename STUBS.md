@@ -42,6 +42,20 @@ shipping a deployed build.
   polish (or sooner via Claude Design hand-off — see
   `docs/design-system/claude-design-handoff.md`). → resume in **T2.11**.
 
+## Profile completion (T1.17 — backend gap)
+
+- **block-prod** `src/auth/authStore.ts:completeProfile` — the bsure-api
+  controllers do not yet expose `PATCH /v1/me` (profile fields + prefs)
+  or `POST /v1/organizations`. The mobile form sends both calls but
+  treats a 404 as "backend isn't ready" and falls through to a local-
+  only profile (sets `firstName/lastName/role` on the in-memory user
+  so the auth gate routes to /(tabs)) plus a UI alert telling the
+  tester their profile is local-only. Once both endpoints land, the
+  same call path will persist server-side and `refreshMe()` will
+  clear `profileCompletedLocally`. → resume in **bsure-api PATCH
+  /v1/me + POST /v1/organizations** (no task id yet — surface as a
+  coordinated PR set against bsure-api).
+
 ## Auth (T1.16)
 
 - **block-prod** `src/auth/cognito.ts` — `COGNITO_POOL_READY = false`.

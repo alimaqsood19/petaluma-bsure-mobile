@@ -12,7 +12,7 @@ afterEach(() => {
 describe('apiRequest', () => {
   it('attaches the bearer token from the configured getter', async () => {
     configureApiClient({ getToken: () => 'dev-alice' });
-    const fetchMock = jest.fn().mockResolvedValue(makeResponse(200, { user: { id: '1' } }));
+    const fetchMock = (jest.fn() as any).mockResolvedValue(makeResponse(200, { user: { id: '1' } }));
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const res = await apiRequest('/v1/me');
@@ -25,7 +25,7 @@ describe('apiRequest', () => {
 
   it('injects an Idempotency-Key on writes when not provided', async () => {
     configureApiClient({ getToken: () => 'dev-alice' });
-    const fetchMock = jest.fn().mockResolvedValue(makeResponse(201, { id: 'h1' }));
+    const fetchMock = (jest.fn() as any).mockResolvedValue(makeResponse(201, { id: 'h1' }));
     global.fetch = fetchMock as unknown as typeof fetch;
 
     await apiRequest('/v1/horses', { method: 'POST', body: { name: 'Sass' } });
@@ -37,7 +37,7 @@ describe('apiRequest', () => {
 
   it('does not set Idempotency-Key on reads', async () => {
     configureApiClient({ getToken: () => 'dev-alice' });
-    const fetchMock = jest.fn().mockResolvedValue(makeResponse(200, { ok: true }));
+    const fetchMock = (jest.fn() as any).mockResolvedValue(makeResponse(200, { ok: true }));
     global.fetch = fetchMock as unknown as typeof fetch;
 
     await apiRequest('/v1/horses?orgId=o1');
@@ -48,9 +48,9 @@ describe('apiRequest', () => {
 
   it('surfaces 401 as { code: "unauthorized" }', async () => {
     configureApiClient({ getToken: () => 'dev-alice' });
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(makeResponse(401, { message: 'bad' })) as unknown as typeof fetch;
+    global.fetch = (jest.fn() as any).mockResolvedValue(
+      makeResponse(401, { message: 'bad' }),
+    ) as unknown as typeof fetch;
 
     const res = await apiRequest('/v1/me');
     expect(res.ok).toBe(false);
@@ -62,11 +62,9 @@ describe('apiRequest', () => {
 
   it('surfaces 429 with retry-after', async () => {
     configureApiClient({ getToken: () => 'dev-alice' });
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue(
-        makeResponse(429, { message: 'slow down' }, { 'retry-after': '12' }),
-      ) as unknown as typeof fetch;
+    global.fetch = (jest.fn() as any).mockResolvedValue(
+      makeResponse(429, { message: 'slow down' }, { 'retry-after': '12' }),
+    ) as unknown as typeof fetch;
 
     const res = await apiRequest('/v1/scans', { method: 'POST', body: {} });
     expect(res.ok).toBe(false);
@@ -78,9 +76,9 @@ describe('apiRequest', () => {
 
   it('surfaces network failure as { code: "network" }', async () => {
     configureApiClient({ getToken: () => 'dev-alice' });
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new TypeError('Network request failed')) as unknown as typeof fetch;
+    global.fetch = (jest.fn() as any).mockRejectedValue(
+      new TypeError('Network request failed'),
+    ) as unknown as typeof fetch;
 
     const res = await apiRequest('/v1/me');
     expect(res.ok).toBe(false);
