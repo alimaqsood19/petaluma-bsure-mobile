@@ -5,4 +5,5 @@
 packages: []
 allowBuilds:
   esbuild: true
+  realm: true
   unrs-resolver: true

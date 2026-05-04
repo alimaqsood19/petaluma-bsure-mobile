@@ -94,6 +94,19 @@ shipping a deployed build.
 
 - *(BLE state machine + Boot pairing entries land in T1.20.)*
 
+## Realm (T1.19)
+
+- **soft** Realm CRUD round-trip (T1.19 DoD requires "an integration test
+  creates, reads, and updates a Horse without errors") is verified by
+  schema-shape unit tests in node + a Maestro flow planned in **T1.32**.
+  Realm's node binding isn't built in our jest env, so the actual
+  `Realm.open()` round-trip runs in the dev client / on-device only.
+  → resume in **T1.32** Maestro signup → create-horse flow.
+
+- **soft** No migrations defined yet (REALM_SCHEMA_VERSION = 1). When any
+  schema property changes shape, bump the version and add a copy step
+  inside `onMigration` in `src/db/realm.ts`. → resume per change.
+
 ## Sync (placeholder until T1.25)
 
 - *(none yet — entries land as T1.25 builds the outbound queue + delta pull.)*
