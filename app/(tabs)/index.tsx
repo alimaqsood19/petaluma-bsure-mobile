@@ -5,6 +5,7 @@ import { Stack, Text, XStack, YStack } from 'tamagui';
 
 import { useAuthStore } from '@/auth';
 import { useHorseStore, type HorseRecord } from '@/horses/store';
+import { SyncIndicator } from '@/sync/SyncIndicator';
 
 export default function HomeScreen() {
   const memberships = useAuthStore((s) => s.memberships);
@@ -28,9 +29,12 @@ export default function HomeScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: '#0A1816' }}>
       <YStack padding="$5" gap="$5">
         <YStack gap="$2">
-          <Text color="$colorMuted" fontSize={12} letterSpacing={2}>
-            HOME
-          </Text>
+          <XStack alignItems="center" justifyContent="space-between">
+            <Text color="$colorMuted" fontSize={12} letterSpacing={2}>
+              HOME
+            </Text>
+            <SyncIndicator />
+          </XStack>
           <Text color="$color" fontSize={28} fontWeight="700">
             {orgName}
           </Text>
